@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digital Clock with Alarm & Glow Effect</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f9f9f9; 
+      color: #000;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .container {
+      text-align: center;
+      padding: 30px;
+      border-radius: 12px;
+      background-color: #ffffff;
+      box-shadow: 0 0 20px rgba(0, 255, 100, 0.3); 
+      transition: background-color 0.3s, box-shadow 0.3s;
+      width: 320px;
+    }
+    .clock {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      text-shadow:
+        0 0 5px #00ff00,
+        0 0 10px #00ff00,
+        0 0 20px #00ff00;
+    }
+    .date {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    button, input[type="time"] {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    input[type="time"] {
+      background-color: #e0e0e0;
+      color: #000;
+      width: 130px;
+    }
+    button:hover {
+      background-color: #ddd;
+    }
+    body.dark-mode {
+      background-color: #121212;
+      color: #f0f0f0;
+    }
+    body.dark-mode .container {
+      background-color: #1e1e1e;
+      box-shadow: 0 0 20px rgba(0, 255, 100, 0.7);
+    }
+    body.dark-mode .clock {
+      text-shadow:
+        0 0 10px #00ff00,
+        0 0 20px #00ff00,
+        0 0 30px #00ff00;
+    }
+    body.dark-mode input[type="time"] {
+      background-color: #2a2a2a;
+      color: #f0f0f0;
+    }
+    body.dark-mode button:hover {
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="date" id="date">Loading date...</div>
+    <div class="controls">
+      <button id="toggleFormatBtn">Switch to 12-Hour</button>
+      <button id="toggleThemeBtn">Toggle Dark/Light Mode</button>
+    </div>
+    <div class="controls">
+      <label for="alarmTime">Set Alarm:</label>
+      <input type="time" id="alarmTime" />
+      <button id="setAlarmBtn">Set Alarm</button>
+      <button id="clearAlarmBtn">Clear Alarm</button>
+    </div>
+    <p id="alarmStatus" style="margin-top: 10px; font-weight: bold;"></p>
+  </div>
+  <audio id="alarmSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" preload="auto"></audio>
+  <script>
+    let is24Hour = true;
+    let alarmTime = null;
+    let ringingCount = 0;
+    const maxRings = 3;
+    const clockElem = document.getElementById("clock");
+    const dateElem = document.getElementById("date");
+    const alarmInput = document.getElementById("alarmTime");
+    const alarmStatus = document.getElementById("alarmStatus");
+    const alarmSound = document.getElementById("alarmSound");
+    const toggleFormatBtn = document.getElementById("toggleFormatBtn");
+    const toggleThemeBtn = document.getElementById("toggleThemeBtn");
+    const setAlarmBtn = document.getElementById("setAlarmBtn");
+    const clearAlarmBtn = document.getElementById("clearAlarmBtn");
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      let seconds = now.getSeconds();
+      let ampm = "";
+      if (!is24Hour) {
+        ampm = hours >= 12 ? " PM" : " AM";
+        hours = hours % 12 || 12;
+      }
+      const paddedHours = hours < 10 ? "0" + hours : hours;
+      const paddedMinutes = minutes < 10 ? "0" + minutes : minutes;
+      const paddedSeconds = seconds < 10 ? "0" + seconds : seconds;
+      const timeString = `${paddedHours}:${paddedMinutes}:${paddedSeconds}${ampm}`;
+      clockElem.textContent = timeString;
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      dateElem.textContent = now.toLocaleDateString(undefined, dateOptions);
+      checkAlarm(paddedHours + ":" + paddedMinutes);
+    }
+    function toggleFormat() {
+      is24Hour = !is24Hour;
+      toggleFormatBtn.textContent = is24Hour ? "Switch to 12-Hour" : "Switch to 24-Hour";
+      updateClock();
+    }
+    function toggleTheme() {
+      document.body.classList.toggle("dark-mode");
+    }
+    function setAlarm() {
+      if (!alarmInput.value) {
+        alert("Please select a valid time for the alarm.");
+        return;
+      }
+      alarmTime = alarmInput.value;
+      alarmStatus.textContent = `⏰ Alarm set for ${alarmTime}`;
+      ringingCount = 0;
+    }
+    function clearAlarm() {
+      alarmTime = null;
+      alarmStatus.textContent = `Alarm cleared.`;
+      alarmInput.value = ""; 
+      stopAlarmSound();
+      ringingCount = 0;
+    }
+    function checkAlarm(currentTime) {
+      if (alarmTime && currentTime === alarmTime) {
+        if (ringingCount < maxRings) {
+          triggerAlarm();
+          ringingCount++;
+        }
+      }
+    }
+    function triggerAlarm() {
+      alarmStatus.textContent = "🔔 Alarm ringing!";
+      alarmSound.play();
+      alarmSound.onended = () => {
+        if (ringingCount < maxRings) {
+          setTimeout(() => {
+            alarmSound.play();
+            ringingCount++;
+          }, 1000);
+        } else {
+          alarmStatus.textContent = `Alarm finished ringing.`;
+          ringingCount = 0;
+          alarmTime = null;
+          alarmInput.value = "";
+        }
+      };
+    }
+    function stopAlarmSound() {
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
+    }
+    toggleFormatBtn.addEventListener("click", toggleFormat);
+    toggleThemeBtn.addEventListener("click", toggleTheme);
+    setAlarmBtn.addEventListener("click", setAlarm);
+    clearAlarmBtn.addEventListener("click", clearAlarm);
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+</body>
+</html>
